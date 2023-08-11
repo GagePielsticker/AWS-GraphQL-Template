@@ -1,5 +1,5 @@
 # AWS-GraphQL-Template
-![Known Vulnerabilities](https://snyk.io/test/github/gagepielsticker/AWS-Auth-Template/badge.svg) 
+![Known Vulnerabilities](https://snyk.io/test/github/gagepielsticker/AWS-GraphQL-Template/badge.svg) 
 
 > A serverless template created as an example of GraphQL implementation in AWS Appsync. This includes WAFv2, Appsync, logging, and some other various services. Deployment of all infra is fully automated using serverless framework.
 
