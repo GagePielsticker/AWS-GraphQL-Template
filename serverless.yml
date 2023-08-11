@@ -1,0 +1,202 @@
+service: graphql-service
+
+###################
+# Plugin Configuration
+###################
+
+plugins:
+  - serverless-offline
+  - serverless-deployment-bucket
+  - serverless-appsync-plugin
+
+###################
+# Deployment Bucket Config
+###################
+custom:
+  deploymentBucket:
+    blockPublicAccess: true
+    tags:
+      - Key: project
+        Value: ${self:service}
+
+###################
+# Appsync Config
+# For docs on this config https://github.com/sid88in/serverless-appsync-plugin
+###################
+appSync:
+  name: ${self:service}
+  xrayEnabled: true
+  
+  logging:
+    level: ERROR # Takes ERROR, NONE, or ALL. Be warned if using ALL it can run up cost a LOT in cloudwatch ingestion fees if high volume of traffic.
+    retentionInDays: 7
+
+  waf:
+    enabled: true
+    arn: !GetAtt wafv2.Arn
+
+  schema: 'src/schemas/*.graphql' # Combine multiple schemas into one https://github.com/sid88in/serverless-appsync-plugin/blob/master/doc/general-config.md#schema
+  
+  apiKeys:
+    - name: apiKey
+
+  authentication:
+    type: API_KEY
+
+  dataSources: # https://github.com/sid88in/serverless-appsync-plugin/blob/master/doc/dataSources.md
+    MyCoolApiCalls:
+      type: 'HTTP'
+      config:
+        endpoint: https://api.publicapis.org/ #example API
+
+  resolvers: # https://github.com/sid88in/serverless-appsync-plugin/blob/master/doc/resolvers.md#resolvers
+    helloResolver:
+      type: Query
+      kind: UNIT
+      field: hello
+      dataSource:
+        type: 'AWS_LAMBDA'
+        config:
+          functionArn: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${self:service}-${self:provider.stage}-helloFunction
+    apiResolver:
+      type: Query
+      kind: UNIT
+      field: apis
+      dataSource: 'MyCoolApiCalls'
+      request: './src/request-resolvers/getList.request.vtl'
+      response: './src/response-resolvers/getList.response.vtl'
+
+# Settings
+provider:
+
+  ###################
+  # General Settings
+  ###################
+
+  name: aws
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+
+  stackTags:
+    project: ${self:service}
+  tags:
+    project: ${self:service}
+
+  deploymentBucket:
+    name: ${self:service}-${self:provider.stage}-deployment-641 ##MUST BE UNIQUE IN EACH REGION
+    
+  ###################
+  # Lambda Functions Settings
+  ###################
+  
+  ### Global environment Vars for lambdas (process.env.MY_NAME in lambdas)
+  environment:
+    MY_NAME: James
+
+  runtime: nodejs18.x #node version
+  memorySize: 512 # optional, in MB, default is 1024
+  timeout: 20 # optional, in seconds, default is 6
+  architecture: arm64 #architecture to run the lambda (graviton2)
+  logRetentionInDays: 7 #time in days to keep lambda logs in cloudwatch
+  tracing: # X-Ray tracing on lambda & apigateway
+    lambda: true
+
+
+###################
+# Lambda Functions to provision for use by appsync
+###################
+# Lambda Packaging Options
+package:
+  individually: true
+  patterns:
+    - '!**/*'
+    - node_modules/**
+    - src/lambdas/utils/** #Global lambda utils
+    - package.json
+
+# Actual lambda functions
+functions:
+  helloFunction:
+    handler: src/lambdas/hello/handler.handler #fileName.exportName in code
+    maximumRetryAttempts: 1 #Retry attempts by lambda on failure
+    package: # Only package code relevant to this specific lambda
+      patterns:
+        - src/lambdas/hello/**
+    events: #API Gateway integration etc
+      - http:
+          method: post
+          path: user/hello
+          private: false #require api key
+          cors: #cors settings
+            origin: '*'
+
+###################
+# Additional Resource Provisioning (WAFv2)
+###################
+resources:
+  Resources:
+
+    # WAF for our api gateway
+    wafv2:
+      Type: AWS::WAFv2::WebACL
+      Properties:
+        DefaultAction:
+          Allow: {}
+        Name: ${self:service}-${self:provider.stage}-WAF
+        Scope: REGIONAL
+        VisibilityConfig:
+          CloudWatchMetricsEnabled: False
+          MetricName: ${self:service}-${self:provider.stage}
+          SampledRequestsEnabled: False
+        Tags:
+          - Key: project
+            Value: ${self:service}
+        Rules: 
+          - Name: Core-Rule-Set
+            OverrideAction:
+              None: {}
+            Priority: 0
+            VisibilityConfig:
+              CloudWatchMetricsEnabled: False
+              MetricName: ${self:service}-${self:provider.stage}-WAF
+              SampledRequestsEnabled: False
+            Statement:
+              ManagedRuleGroupStatement:
+                VendorName: AWS
+                Name: AWSManagedRulesCommonRuleSet
+          - Name: Known-Bad-Input
+            OverrideAction:
+              None: {}
+            Priority: 1
+            VisibilityConfig:
+              CloudWatchMetricsEnabled: False
+              MetricName: ${self:service}-${self:provider.stage}-WAF
+              SampledRequestsEnabled: False
+            Statement:
+              ManagedRuleGroupStatement:
+                VendorName: AWS
+                Name: AWSManagedRulesKnownBadInputsRuleSet
+          - Name: Anonymous-IP
+            OverrideAction:
+              None: {}
+            Priority: 2
+            VisibilityConfig:
+              CloudWatchMetricsEnabled: False
+              MetricName: ${self:service}-${self:provider.stage}-WAF
+              SampledRequestsEnabled: False
+            Statement:
+              ManagedRuleGroupStatement:
+                VendorName: AWS
+                Name: AWSManagedRulesAnonymousIpList
+          - Name: IP-Reputation
+            OverrideAction:
+              None: {}
+            Priority: 3
+            VisibilityConfig:
+              CloudWatchMetricsEnabled: False
+              MetricName: ${self:service}-${self:provider.stage}-WAF
+              SampledRequestsEnabled: False
+            Statement:
+              ManagedRuleGroupStatement:
+                VendorName: AWS
+                Name: AWSManagedRulesAmazonIpReputationList

@@ -1,0 +1,8 @@
+## return the body
+## The response from the api
+## {
+##     count: 1234,
+##     entries: []
+## }
+#set( $res = $util.parseJson($ctx.result.body).entries )
+$util.toJson($res)

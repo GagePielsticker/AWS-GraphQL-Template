@@ -1,0 +1,11 @@
+extend type Query {
+  apis: [apiList]
+}
+
+type apiList {
+    API: String,
+    Auth: String,
+    Cors: String,
+    HTTPS: Boolean,
+    Link: String
+}

@@ -1,0 +1,37 @@
+{
+  "name": "aws-graphql-template",
+  "version": "1.0.0",
+  "description": "A serverless template created as an example of user signup & JWT authentication in AWS using DynamoDB, Lambdas, WAFv2, and API-Gateway. Deployment of all infrastructure fully automated using serverless framework.",
+  "main": ".",
+  "scripts": {
+    "validate-schema": "serverless appsync validate-schema",
+    "build": "serverless package",
+    "deploy": "serverless deploy --stage dev --region us-east-1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GagePielsticker/AWS-GraphQL-Template.git"
+  },
+  "keywords": [
+    "api",
+    "template",
+    "serverless",
+    "boilerplate",
+    "graphql",
+    "appsync",
+    "example"
+  ],
+  "author": "James Gage Pielsticker",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/GagePielsticker/AWS-GraphQL-Template/issues"
+  },
+  "homepage": "https://github.com/GagePielsticker/AWS-GraphQL-Template#readme",
+  "devDependencies": {
+    "serverless": "^3.34.0",
+    "serverless-appsync-plugin": "^2.3.1",
+    "serverless-deployment-bucket": "^1.6.0",
+    "serverless-offline": "^12.0.4",
+    "standard": "^17.1.0"
+  }
+}
