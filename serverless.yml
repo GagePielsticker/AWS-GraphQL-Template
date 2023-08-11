@@ -26,7 +26,7 @@ custom:
 appSync:
   name: ${self:service}
   xrayEnabled: true
-  
+
   logging:
     level: ERROR # Takes ERROR, NONE, or ALL. Be warned if using ALL it can run up cost a LOT in cloudwatch ingestion fees if high volume of traffic.
     retentionInDays: 7
@@ -122,13 +122,6 @@ functions:
     package: # Only package code relevant to this specific lambda
       patterns:
         - src/lambdas/hello/**
-    events: #API Gateway integration etc
-      - http:
-          method: post
-          path: user/hello
-          private: false #require api key
-          cors: #cors settings
-            origin: '*'
 
 ###################
 # Additional Resource Provisioning (WAFv2)
